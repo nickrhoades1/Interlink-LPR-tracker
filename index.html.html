@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>InterLink LPR Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 10px 40px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    form {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: end;
+    }
+    label {
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    input[type="text"], input[type="search"], input[type="password"] {
+      padding: 6px;
+      font-size: 0.95rem;
+    }
+    button {
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .small-btn {
+      padding: 5px 8px;
+      font-size: 0.8rem;
+    }
+    #duplicate-warning {
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      background-color: #ffe0e0;
+      border: 1px solid #ff8080;
+      color: #700;
+      display: none;
+      font-size: 0.85rem;
+    }
+    #status-bar {
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+      color: #555;
+    }
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    #controls input[type="search"] {
+      min-width: 220px;
+    }
+    .main-layout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: flex-start;
+    }
+    .table-wrapper {
+      flex: 2 1 60%;
+      min-width: 350px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+    tr.duplicate {
+      background-color: #fff2f2;
+    }
+    tr.recovered-row td {
+      text-decoration: line-through;
+      color: #555;
+    }
+    .no-records {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    .map-panel {
+      flex: 1 1 35%;
+      min-width: 260px;
+    }
+    .map-panel h2 {
+      font-size: 1rem;
+      margin: 0 0 6px;
+    }
+    #map-image {
+      width: 100%;
+      height: auto;
+      border: 1px solid #ccc;
+      min-height: 220px;
+      background: #f9f9f9;
+    }
+    #map-note {
+      font-size: 0.8rem;
+      color: #555;
+      margin-top: 4px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      background: #eef;
+      color: #335;
+      margin-left: 4px;
+    }
+    @media (max-width: 768px) {
+      form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .main-layout {
+        flex-direction: column;
+      }
+    }
+
+    /* PIN overlay */
+    #pin-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    #pin-card {
+      background: #fff;
+      padding: 20px 24px 18px;
+      border-radius: 10px;
+      max-width: 320px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+      text-align: center;
+    }
+    #pin-card h2 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+    }
+    #pin-card p {
+      margin: 0 0 10px;
+      font-size: 0.85rem;
+      color: #555;
+    }
+    #pin-input {
+      width: 100%;
+      margin-bottom: 8px;
+      text-align: center;
+      letter-spacing: 0.35em;
+      font-weight: bold;
+    }
+    #pin-error {
+      color: #b00020;
+      font-size: 0.8rem;
+      min-height: 1em;
+      margin-bottom: 6px;
+    }
+    #pin-btn {
+      width: 100%;
+    }
+    #app-root {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #app-root.app-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- PIN overlay -->
+  <div id="pin-overlay">
+    <div id="pin-card">
+      <h2>InterLink LPR Tracker</h2>
+      <p>Enter access PIN to continue.</p>
+      <input
+        type="password"
+        id="pin-input"
+        maxlength="8"
+        autocomplete="off"
+        placeholder="••••"
+      />
+      <div id="pin-error"></div>
+      <button id="pin-btn">Unlock</button>
+    </div>
+  </div>
+
+  <!-- Main app root -->
+  <div id="app-root">
+    <h1>InterLink LPR Tracker</h1>
+
+    <form id="entry-form">
+      <label>
+        License Plate
+        <input type="text" id="plate" required />
+      </label>
+      <label>
+        Address on File
+        <input type="text" id="address" />
+      </label>
+      <label>
+        VIN
+        <input type="text" id="vin" />
+      </label>
+      <label>
+        Recovered?
+        <input type="checkbox" id="recovered" />
+      </label>
+      <button type="submit">Add Entry</button>
+    </form>
+
+    <div id="duplicate-warning"></div>
+    <div id="status-bar"></div>
+
+    <div id="controls">
+      <input type="search" id="search" placeholder="Search by plate, address, or VIN" />
+      <button type="button" id="clear-search" class="small-btn">Clear Search</button>
+      <button type="button" id="delete-all" class="small-btn">Delete ALL Records</button>
+    </div>
+
+    <div class="main-layout">
+      <div class="table-wrapper">
+        <table id="plate-table">
+          <thead>
+            <tr>
+              <th>License Plate</th>
+              <th>Address</th>
+              <th>VIN</th>
+              <th>Recovered</th>
+              <th>Date Added</th>
+              <th>Map</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <div id="no-records" class="no-records" style="display: none;">
+          No records yet. Add a plate above to get started.
+        </div>
+      </div>
+
+      <div class="map-panel">
+        <h2>Map View <span class="pill">Camera Marker</span></h2>
+        <img id="map-image" src="" alt="Map preview" />
+        <div id="map-note">
+          Select “Map” on a record to show its address with a camera icon.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase (v11) + App logic -->
+  <script type="module">
+    // ---------- SIMPLE PIN GATE ----------
+    // Change this PIN to whatever you want
+    const ACCESS_PIN = "7226";
+    const ACCESS_KEY = "interlinkLprAccessGranted";
+
+    const pinOverlay = document.getElementById("pin-overlay");
+    const appRoot = document.getElementById("app-root");
+    const pinInput = document.getElementById("pin-input");
+    const pinBtn = document.getElementById("pin-btn");
+    const pinError = document.getElementById("pin-error");
+
+    function showApp() {
+      pinOverlay.style.display = "none";
+      appRoot.classList.add("app-visible");
+    }
+
+    function checkExistingAccess() {
+      try {
+        const granted = sessionStorage.getItem(ACCESS_KEY);
+        if (granted === "yes") {
+          showApp();
+        } else {
+          pinInput.focus();
+        }
+      } catch (_) {
+        pinInput.focus();
+      }
+    }
+
+    function handlePinSubmit() {
+      const entered = pinInput.value.trim();
+      if (!entered) {
+        pinError.textContent = "Enter the PIN.";
+        return;
+      }
+      if (entered === ACCESS_PIN) {
+        pinError.textContent = "";
+        try {
+          sessionStorage.setItem(ACCESS_KEY, "yes");
+        } catch (_) {}
+        showApp();
+      } else {
+        pinError.textContent = "Incorrect PIN. Try again.";
+        pinInput.value = "";
+        pinInput.focus();
+      }
+    }
+
+    pinBtn.addEventListener("click", handlePinSubmit);
+    pinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handlePinSubmit();
+      }
+    });
+
+    checkExistingAccess();
+
+    // ---------- APP + DATABASE CODE ----------
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      deleteDoc,
+      doc,
+      onSnapshot,
+      updateDoc,
+      query,
+      orderBy,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    // FILL THIS IN FROM YOUR FIREBASE CONSOLE
+    const firebaseConfig = {
+      apiKey: "AIzaSyAI4BpcUMEoSgaayU7WiE65_9_YWorPrI8",
+      authDomain: "interlink-lpr.firebaseapp.com",
+      projectId: "interlink-lpr",
+      storageBucket: "interlink-lpr.firebasestorage.app",
+      messagingSenderId: "494717331872",
+      appId: "1:494717331872:web:7f99d6f3ad7ef4a736dcc5"
+    };
+
+    const statusBar = document.getElementById("status-bar");
+    const duplicateWarning = document.getElementById("duplicate-warning");
+    const tableBody = document.querySelector("#plate-table tbody");
+    const noRecordsDiv = document.getElementById("no-records");
+    const mapImage = document.getElementById("map-image");
+    const mapNote = document.getElementById("map-note");
+
+    let searchQuery = "";
+    let records = []; // live snapshot
+
+    let app, db, platesCol;
+    try {
+      app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      platesCol = collection(db, "plates");
+      statusBar.textContent = "Status: connected and syncing.";
+    } catch (err) {
+      console.error(err);
+      statusBar.textContent = "Status: configuration error.";
+    }
+
+    if (platesCol) {
+      const qPlates = query(platesCol, orderBy("createdAt", "desc"));
+      onSnapshot(
+        qPlates,
+        (snapshot) => {
+          records = snapshot.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              plate: data.plate || "",
+              plateNormalized: data.plateNormalized || (data.plate || "").toUpperCase(),
+              address: data.address || "",
+              vin: data.vin || "",
+              recovered: !!data.recovered,
+              createdAt: data.createdAt || null
+            };
+          });
+          markDuplicates();
+          renderTable();
+          statusBar.textContent = "Status: live.";
+        },
+        (error) => {
+          console.error(error);
+          statusBar.textContent = "Status: connection issue.";
+        }
+      );
+    }
+
+    function markDuplicates() {
+      const counts = {};
+      records.forEach((r) => {
+        const key = (r.plateNormalized || "").toUpperCase();
+        if (!key) return;
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      records.forEach((r) => {
+        const key = (r.plateNormalized || "").toUpperCase();
+        r.isDuplicate = key && counts[key] > 1;
+      });
+    }
+
+    function getFilteredRecords() {
+      if (!searchQuery) return records;
+      const q = searchQuery.toLowerCase();
+      return records.filter((r) => {
+        return (
+          (r.plate || "").toLowerCase().includes(q) ||
+          (r.address || "").toLowerCase().includes(q) ||
+          (r.vin || "").toLowerCase().includes(q)
+        );
+      });
+    }
+
+    function renderTable() {
+      tableBody.innerHTML = "";
+      const list = getFilteredRecords();
+
+      if (!list.length) {
+        noRecordsDiv.style.display = "block";
+      } else {
+        noRecordsDiv.style.display = "none";
+      }
+
+      list.forEach((rec) => {
+        const tr = document.createElement("tr");
+        if (rec.isDuplicate) tr.classList.add("duplicate");
+        if (rec.recovered) tr.classList.add("recovered-row");
+
+        const plateTd = document.createElement("td");
+        plateTd.textContent = rec.plate;
+
+        const addrTd = document.createElement("td");
+        addrTd.textContent = rec.address || "";
+
+        const vinTd = document.createElement("td");
+        vinTd.textContent = rec.vin || "";
+
+        const recTd = document.createElement("td");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = !!rec.recovered;
+        checkbox.addEventListener("change", async () => {
+          try {
+            await updateDoc(doc(db, "plates", rec.id), { recovered: checkbox.checked });
+          } catch (err) {
+            console.error(err);
+            alert("Error updating recovered status.");
+          }
+        });
+        recTd.appendChild(checkbox);
+
+        const dateTd = document.createElement("td");
+        if (rec.createdAt) {
+          const d = new Date(rec.createdAt);
+          if (!isNaN(d.getTime())) {
+            dateTd.textContent = d.toLocaleString();
+          } else {
+            dateTd.textContent = rec.createdAt;
+          }
+        } else {
+          dateTd.textContent = "";
+        }
+
+        const mapTd = document.createElement("td");
+        const mapBtn = document.createElement("button");
+        mapBtn.textContent = "Map";
+        mapBtn.className = "small-btn";
+        mapBtn.addEventListener("click", () => showOnMap(rec));
+        mapTd.appendChild(mapBtn);
+
+        const actionsTd = document.createElement("td");
+        const navBtn = document.createElement("button");
+        navBtn.textContent = "Navigate";
+        navBtn.className = "small-btn";
+        navBtn.style.marginRight = "4px";
+        navBtn.addEventListener("click", () => navigateTo(rec));
+
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Delete";
+        delBtn.className = "small-btn";
+        delBtn.addEventListener("click", () => deleteRecord(rec.id));
+
+        actionsTd.appendChild(navBtn);
+        actionsTd.appendChild(delBtn);
+
+        tr.appendChild(plateTd);
+        tr.appendChild(addrTd);
+        tr.appendChild(vinTd);
+        tr.appendChild(recTd);
+        tr.appendChild(dateTd);
+        tr.appendChild(mapTd);
+        tr.appendChild(actionsTd);
+
+        tableBody.appendChild(tr);
+      });
+    }
+
+    function showOnMap(rec) {
+      const camIcon = "https://cdn-icons-png.flaticon.com/512/1047/1047711.png";
+      const searchText = rec.address && rec.address.trim() ? rec.address.trim() : rec.plate;
+      if (!searchText) return;
+
+      const addr = encodeURIComponent(searchText);
+      const url =
+        "https://maps.googleapis.com/maps/api/staticmap?center=" +
+        addr +
+        "&zoom=15&size=600x400&markers=icon:" +
+        encodeURIComponent(camIcon) +
+        "|" +
+        addr;
+
+      mapImage.src = url;
+      mapNote.textContent = "Showing camera marker for: " + searchText;
+    }
+
+    function navigateTo(rec) {
+      const searchText = rec.address && rec.address.trim() ? rec.address.trim() : rec.plate;
+      if (!searchText) return;
+      const url =
+        "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(searchText);
+      window.open(url, "_blank");
+    }
+
+    async function deleteRecord(id) {
+      if (!confirm("Delete this record?")) return;
+      try {
+        await deleteDoc(doc(db, "plates", id));
+      } catch (err) {
+        console.error(err);
+        alert("Error deleting record.");
+      }
+    }
+
+    async function deleteAllRecords() {
+      if (!confirm("DELETE ALL records for everyone? This cannot be undone.")) return;
+      try {
+        const snap = await getDocs(platesCol);
+        const batchDeletes = [];
+        snap.forEach((d) => {
+          batchDeletes.push(deleteDoc(doc(db, "plates", d.id)));
+        });
+        await Promise.all(batchDeletes);
+      } catch (err) {
+        console.error(err);
+        alert("Error deleting all records.");
+      }
+    }
+
+    document.getElementById("entry-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!db) {
+        alert("Configuration issue – cannot save right now.");
+        return;
+      }
+
+      const plateInput = document.getElementById("plate");
+      const addrInput = document.getElementById("address");
+      const vinInput = document.getElementById("vin");
+      const recoveredInput = document.getElementById("recovered");
+
+      const plate = plateInput.value.trim();
+      const address = addrInput.value.trim();
+      const vin = vinInput.value.trim();
+      const recovered = recoveredInput.checked;
+
+      if (!plate) return;
+
+      const normalized = plate.toUpperCase();
+      const matches = records.filter(
+        (r) => (r.plateNormalized || "").toUpperCase() === normalized
+      );
+
+      if (matches.length > 0) {
+        duplicateWarning.style.display = "block";
+        duplicateWarning.textContent =
+          "⚠ Duplicate detected: this plate is already in the list (" +
+          matches.length +
+          " entr" +
+          (matches.length === 1 ? "y" : "ies") +
+          ").";
+      } else {
+        duplicateWarning.style.display = "none";
+        duplicateWarning.textContent = "";
+      }
+
+      try {
+        await addDoc(platesCol, {
+          plate,
+          plateNormalized: normalized,
+          address,
+          vin,
+          recovered,
+          createdAt: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Error adding record.");
+      }
+
+      e.target.reset();
+      plateInput.focus();
+    });
+
+    document.getElementById("search").addEventListener("input", (e) => {
+      searchQuery = e.target.value || "";
+      renderTable();
+    });
+
+    document.getElementById("clear-search").addEventListener("click", () => {
+      const searchInput = document.getElementById("search");
+      searchInput.value = "";
+      searchQuery = "";
+      renderTable();
+      searchInput.focus();
+    });
+
+    document.getElementById("delete-all").addEventListener("click", deleteAllRecords);
+  </script>
+</body>
+</html>
