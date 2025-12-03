@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>InterLink LPR Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 10px 40px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    /* Tabs */
+    #location-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .tab-btn {
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: #0057d9;
+      color: #fff;
+      border-color: #0040a8;
+      font-weight: bold;
+    }
+    form {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: end;
+    }
+    label {
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    input[type="text"], input[type="search"], input[type="password"], select, textarea {
+      padding: 6px;
+      font-size: 0.95rem;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 32px;
+      max-height: 80px;
+    }
+    button {
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .small-btn {
+      padding: 5px 8px;
+      font-size: 0.8rem;
+      margin-right: 3px;
+    }
+    #duplicate-warning {
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      background-color: #fff8d5;
+      border: 1px solid #f0d76b;
+      color: #665200;
+      display: none;
+      font-size: 0.85rem;
+    }
+    #status-bar {
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+      color: #555;
+    }
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    #controls input[type="search"] {
+      min-width: 220px;
+    }
+    .table-wrapper {
+      width: 100%;
+      min-width: 350px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+    tr.duplicate {
+      background-color: #fff2f2;
+    }
+    tr.recovered-row td {
+      text-decoration: line-through;
+      color: #555;
+    }
+    .no-records {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    @media (max-width: 900px) {
+      form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    /* PIN overlay */
+    #pin-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    #pin-card {
+      background: #fff;
+      padding: 20px 24px 18px;
+      border-radius: 10px;
+      max-width: 320px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+      text-align: center;
+    }
+    #pin-card h2 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+    }
+    #pin-card p {
+      margin: 0 0 10px;
+      font-size: 0.85rem;
+      color: #555;
+    }
+    #pin-input {
+      width: 100%;
+      margin-bottom: 8px;
+      text-align: center;
+      letter-spacing: 0.35em;
+      font-weight: bold;
+    }
+    #pin-error {
+      color: #b00020;
+      font-size: 0.8rem;
+      min-height: 1em;
+      margin-bottom: 6px;
+    }
+    #pin-btn {
+      width: 100%;
+    }
+    #app-root {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #app-root.app-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Edit modal */
+    #edit-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9998;
+    }
+    #edit-card {
+      background: #fff;
+      padding: 16px 18px 14px;
+      border-radius: 10px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      font-size: 0.9rem;
+    }
+    #edit-card h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      text-align: center;
+    }
+    .edit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .edit-grid label {
+      font-size: 0.8rem;
+    }
+    #edit-notes-info {
+      font-size: 0.75rem;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    #edit-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <!-- PIN overlay -->
+  <div id="pin-overlay">
+    <div id="pin-card">
+      <h2>InterLink LPR Tracker</h2>
+      <p>Enter access PIN to continue.</p>
+      <input
+        type="password"
+        id="pin-input"
+        maxlength="8"
+        autocomplete="off"
+        placeholder="••••"
+      />
+      <div id="pin-error"></div>
+      <button id="pin-btn">Unlock</button>
+    </div>
+  </div>
+
+  <!-- Edit modal overlay -->
+  <div id="edit-overlay">
+    <div id="edit-card">
+      <h3>Edit Plate Entry</h3>
+      <div class="edit-grid">
+        <label>
+          Plate
+          <input type="text" id="edit-plate" />
+        </label>
+        <label>
+          Location
+          <select id="edit-location">
+            <option value="Pittsburgh">Pittsburgh</option>
+            <option value="Erie">Erie</option>
+            <option value="Warren">Warren</option>
+            <option value="Akron">Akron</option>
+            <option value="Cleveland">Cleveland</option>
+            <option value="Greenville">Greenville</option>
+          </select>
+        </label>
+        <label>
+          Address
+          <input type="text" id="edit-address" />
+        </label>
+        <label>
+          VIN
+          <input type="text" id="edit-vin" />
+        </label>
+        <label>
+          Recovered?
+          <input type="checkbox" id="edit-recovered" />
+        </label>
+      </div>
+      <div id="edit-notes-info">
+        Notes are edited via the <strong>Notes</strong> button on each row.
+      </div>
+      <div id="edit-actions">
+        <button type="button" id="edit-cancel" class="small-btn">Cancel</button>
+        <button type="button" id="edit-save" class="small-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main app root -->
+  <div id="app-root">
+    <h1>InterLink LPR Tracker</h1>
+
+    <!-- Location tabs -->
+    <div id="location-tabs">
+      <button class="tab-btn active" data-loc="All">All</button>
+      <button class="tab-btn" data-loc="Pittsburgh">Pittsburgh</button>
+      <button class="tab-btn" data-loc="Erie">Erie</button>
+      <button class="tab-btn" data-loc="Warren">Warren</button>
+      <button class="tab-btn" data-loc="Akron">Akron</button>
+      <button class="tab-btn" data-loc="Cleveland">Cleveland</button>
+      <button class="tab-btn" data-loc="Greenville">Greenville</button>
+    </div>
+
+    <form id="entry-form">
+      <label>
+        License Plate
+        <input type="text" id="plate" required />
+      </label>
+      <label>
+        Address on File
+        <input type="text" id="address" />
+      </label>
+      <label>
+        VIN
+        <input type="text" id="vin" />
+      </label>
+      <label>
+        Location Tab
+        <select id="location">
+          <option value="Pittsburgh">Pittsburgh</option>
+          <option value="Erie">Erie</option>
+          <option value="Warren">Warren</option>
+          <option value="Akron">Akron</option>
+          <option value="Cleveland">Cleveland</option>
+          <option value="Greenville">Greenville</option>
+        </select>
+      </label>
+      <label>
+        Notes
+        <textarea id="notes" placeholder="Optional notes"></textarea>
+      </label>
+      <label>
+        Recovered?
+        <input type="checkbox" id="recovered" />
+      </label>
+      <button type="submit">Add Entry</button>
+    </form>
+
+    <div id="duplicate-warning"></div>
+    <div id="status-bar"></div>
+
+    <div id="controls">
+      <input type="search" id="search" placeholder="Search by plate, address, VIN, location, or notes" />
+      <button type="button" id="clear-search" class="small-btn">Clear Search</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table id="plate-table">
+        <thead>
+          <tr>
+            <th>License Plate</th>
+            <th>Address</th>
+            <th>VIN</th>
+            <th>Location</th>
+            <th>Notes</th>
+            <th>Recovered</th>
+            <th>Date Added</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div id="no-records" class="no-records" style="display: none;">
+        No records yet. Add a plate above to get started.
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase (v11) + App logic -->
+  <script type="module">
+    // ---------- SIMPLE PIN GATE ----------
+    // PIN requested: 7226
+    const ACCESS_PIN = "7226";
+    const ACCESS_KEY = "interlinkLprAccessGranted";
+
+    const pinOverlay = document.getElementById("pin-overlay");
+    const appRoot = document.getElementById("app-root");
+    const pinInput = document.getElementById("pin-input");
+    const pinBtn = document.getElementById("pin-btn");
+    const pinError = document.getElementById("pin-error");
+
+    function showApp() {
+      pinOverlay.style.display = "none";
+      appRoot.classList.add("app-visible");
+    }
+
+    function checkExistingAccess() {
+      try {
+        const granted = sessionStorage.getItem(ACCESS_KEY);
+        if (granted === "yes") {
+          showApp();
+        } else {
+          pinInput.focus();
+        }
+      } catch (_) {
+        pinInput.focus();
+      }
+    }
+
+    function handlePinSubmit() {
+      const entered = pinInput.value.trim();
+      if (!entered) {
+        pinError.textContent = "Enter the PIN.";
+        return;
+      }
+      if (entered === ACCESS_PIN) {
+        pinError.textContent = "";
+        try {
+          sessionStorage.setItem(ACCESS_KEY, "yes");
+        } catch (_) {}
+        showApp();
+      } else {
+        pinError.textContent = "Incorrect PIN. Try again.";
+        pinInput.value = "";
+        pinInput.focus();
+      }
+    }
+
+    pinBtn.addEventListener("click", handlePinSubmit);
+    pinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handlePinSubmit();
+      }
+    });
+
+    checkExistingAccess();
+
+    // ---------- APP + DATABASE CODE ----------
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      deleteDoc,
+      doc,
+      onSnapshot,
+      updateDoc,
+      query,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    // Firebase config you provided
+    const firebaseConfig = {
+      apiKey: "AIzaSyAI4BpcUMEoSgaayU7WiE65_9_YWorPrI8",
+      authDomain: "interlink-lpr.firebaseapp.com",
+      projectId: "interlink-lpr",
+      storageBucket: "interlink-lpr.firebasestorage.app",
+      messagingSenderId: "494717331872",
+      appId: "1:494717331872:web:7f99d6f3ad7ef4a736dcc5"
+    };
+
+    const statusBar = document.getElementById("status-bar");
+    const duplicateWarning = document.getElementById("duplicate-warning");
+    const tableBody = document.querySelector("#plate-table tbody");
+    const noRecordsDiv = document.getElementById("no-records");
+    const tabsContainer = document.getElementById("location-tabs");
+    const searchInput = document.getElementById("search");
+
+    // Edit modal elements
+    const editOverlay = document.getElementById("edit-overlay");
+    const editPlateInput = document.getElementById("edit-plate");
+    const editLocationSelect = document.getElementById("edit-location");
+    const editAddressInput = document.getElementById("edit-address");
+    const editVinInput = document.getElementById("edit-vin");
+    const editRecoveredInput = document.getElementById("edit-recovered");
+    const editSaveBtn = document.getElementById("edit-save");
+    const editCancelBtn = document.getElementById("edit-cancel");
+
+    let currentEditId = null;
+
+    let searchQuery = "";
+    let activeLocation = "All";
+    let records = []; // live snapshot
+
+    let app, db, platesCol;
+    try {
+      app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      platesCol = collection(db, "plates");
+      statusBar.textContent = "Status: connected and syncing.";
+    } catch (err) {
+      console.error(err);
+      statusBar.textContent = "Status: configuration error.";
+    }
+
+    // Tabs handling
+    tabsContainer.addEventListener("click", (e) => {
+      const btn = e.target.closest(".tab-btn");
+      if (!btn) return;
+      activeLocation = btn.getAttribute("data-loc") || "All";
+
+      // update active class
+      document.querySelectorAll(".tab-btn").forEach(b => {
+        b.classList.toggle("active", b === btn);
+      });
+
+      renderTable();
+    });
+
+    if (platesCol) {
+      // Order by plateNormalized so duplicates are grouped together
+      const qPlates = query(platesCol, orderBy("plateNormalized"));
+      onSnapshot(
+        qPlates,
+        (snapshot) => {
+          records = snapshot.docs.map((d) => {
+            const data = d.data();
+            let notesArray = [];
+            if (Array.isArray(data.notes)) {
+              notesArray = data.notes;
+            } else if (typeof data.notes === "string" && data.notes.trim()) {
+              notesArray = [{
+                text: data.notes.trim(),
+                ts: data.createdAt || new Date().toISOString()
+              }];
+            }
+            return {
+              id: d.id,
+              plate: data.plate || "",
+              plateNormalized: data.plateNormalized || (data.plate || "").toUpperCase(),
+              address: data.address || "",
+              vin: data.vin || "",
+              location: data.location || "",
+              notes: notesArray,
+              recovered: !!data.recovered,
+              createdAt: data.createdAt || null
+            };
+          });
+          markDuplicates();
+          renderTable();
+          statusBar.textContent = "Status: live.";
+        },
+        (error) => {
+          console.error(error);
+          statusBar.textContent = "Status: connection issue.";
+        }
+      );
+    }
+
+    function markDuplicates() {
+      const counts = {};
+      records.forEach((r) => {
+        const key = (r.plateNormalized || "").toUpperCase();
+        if (!key) return;
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      records.forEach((r) => {
+        const key = (r.plateNormalized || "").toUpperCase();
+        r.isDuplicate = key && counts[key] > 1;
+      });
+
+      const hasDupes = Object.values(counts).some(c => c > 1);
+      if (hasDupes) {
+        duplicateWarning.style.display = "block";
+        duplicateWarning.textContent =
+          "Note: duplicate plates are allowed and grouped together in this list.";
+      } else {
+        duplicateWarning.style.display = "none";
+        duplicateWarning.textContent = "";
+      }
+    }
+
+    function passesLocation(rec) {
+      if (activeLocation === "All") return true;
+      const loc = (rec.location || "").toLowerCase();
+      return loc === activeLocation.toLowerCase();
+    }
+
+    function getFilteredRecords() {
+      let list = records.filter(passesLocation);
+      if (!searchQuery) return list;
+      const q = searchQuery.toLowerCase();
+      return list.filter((r) => {
+        const notesText = (r.notes || []).map(n => n.text || "").join(" ").toLowerCase();
+        return (
+          (r.plate || "").toLowerCase().includes(q) ||
+          (r.address || "").toLowerCase().includes(q) ||
+          (r.vin || "").toLowerCase().includes(q) ||
+          (r.location || "").toLowerCase().includes(q) ||
+          notesText.includes(q)
+        );
+      });
+    }
+
+    function renderTable() {
+      tableBody.innerHTML = "";
+      const list = getFilteredRecords();
+
+      if (!list.length) {
+        noRecordsDiv.style.display = "block";
+      } else {
+        noRecordsDiv.style.display = "none";
+      }
+
+      list.forEach((rec) => {
+        const tr = document.createElement("tr");
+        if (rec.isDuplicate) tr.classList.add("duplicate");
+        if (rec.recovered) tr.classList.add("recovered-row");
+
+        const plateTd = document.createElement("td");
+        plateTd.textContent = rec.plate;
+
+        const addrTd = document.createElement("td");
+        addrTd.textContent = rec.address || "";
+
+        const vinTd = document.createElement("td");
+        vinTd.textContent = rec.vin || "";
+
+        const locTd = document.createElement("td");
+        locTd.textContent = rec.location || "";
+
+        const notesTd = document.createElement("td");
+        const count = (rec.notes || []).length;
+        if (count > 0) {
+          const lastNote = rec.notes[rec.notes.length - 1];
+          const preview = (lastNote.text || "").slice(0, 40);
+          notesTd.textContent = count + " note" + (count === 1 ? "" : "s") +
+            (preview ? " – " + preview + (lastNote.text.length > 40 ? "…" : "") : "");
+        } else {
+          notesTd.textContent = "";
+        }
+
+        const recTd = document.createElement("td");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = !!rec.recovered;
+        checkbox.addEventListener("change", async () => {
+          try {
+            await updateDoc(doc(db, "plates", rec.id), { recovered: checkbox.checked });
+          } catch (err) {
+            console.error(err);
+            alert("Error updating recovered status.");
+          }
+        });
+        recTd.appendChild(checkbox);
+
+        const dateTd = document.createElement("td");
+        if (rec.createdAt) {
+          const d = new Date(rec.createdAt);
+          if (!isNaN(d.getTime())) {
+            dateTd.textContent = d.toLocaleString();
+          } else {
+            dateTd.textContent = rec.createdAt;
+          }
+        } else {
+          dateTd.textContent = "";
+        }
+
+        const actionsTd = document.createElement("td");
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.className = "small-btn";
+        editBtn.addEventListener("click", () => openEditModal(rec));
+
+        const notesBtn = document.createElement("button");
+        notesBtn.textContent = "Notes";
+        notesBtn.className = "small-btn";
+        notesBtn.addEventListener("click", () => manageNotes(rec));
+
+        const mapBtn = document.createElement("button");
+        mapBtn.textContent = "Map";
+        mapBtn.className = "small-btn";
+        mapBtn.addEventListener("click", () => showOnMap(rec));
+
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Delete";
+        delBtn.className = "small-btn";
+        delBtn.addEventListener("click", () => deleteRecord(rec.id));
+
+        actionsTd.appendChild(editBtn);
+        actionsTd.appendChild(notesBtn);
+        actionsTd.appendChild(mapBtn);
+        actionsTd.appendChild(delBtn);
+
+        tr.appendChild(plateTd);
+        tr.appendChild(addrTd);
+        tr.appendChild(vinTd);
+        tr.appendChild(locTd);
+        tr.appendChild(notesTd);
+        tr.appendChild(recTd);
+        tr.appendChild(dateTd);
+        tr.appendChild(actionsTd);
+
+        tableBody.appendChild(tr);
+      });
+    }
+
+    function showOnMap(rec) {
+      const searchText =
+        (rec.address && rec.address.trim()) ? rec.address.trim() :
+        (rec.location && rec.location.trim()) ? rec.location.trim() :
+        rec.plate;
+      if (!searchText) return;
+      const url =
+        "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(searchText);
+      window.open(url, "_blank");
+    }
+
+    async function deleteRecord(id) {
+      if (!confirm("Delete this record?")) return;
+      try {
+        await deleteDoc(doc(db, "plates", id));
+      } catch (err) {
+        console.error(err);
+        alert("Error deleting record.");
+      }
+    }
+
+    function openEditModal(rec) {
+      currentEditId = rec.id;
+      editPlateInput.value = rec.plate || "";
+      editAddressInput.value = rec.address || "";
+      editVinInput.value = rec.vin || "";
+      editLocationSelect.value = rec.location || "Pittsburgh";
+      editRecoveredInput.checked = !!rec.recovered;
+      editOverlay.style.display = "flex";
+    }
+
+    function closeEditModal() {
+      currentEditId = null;
+      editOverlay.style.display = "none";
+    }
+
+    editCancelBtn.addEventListener("click", () => {
+      closeEditModal();
+    });
+
+    editSaveBtn.addEventListener("click", async () => {
+      if (!currentEditId || !db) {
+        closeEditModal();
+        return;
+      }
+      const plate = editPlateInput.value.trim();
+      const address = editAddressInput.value.trim();
+      const vin = editVinInput.value.trim();
+      const location = editLocationSelect.value.trim();
+      const recovered = editRecoveredInput.checked;
+      if (!plate) {
+        alert("Plate cannot be empty.");
+        return;
+      }
+      const normalized = plate.toUpperCase();
+      try {
+        await updateDoc(doc(db, "plates", currentEditId), {
+          plate,
+          plateNormalized: normalized,
+          address,
+          vin,
+          location,
+          recovered
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Error updating record.");
+      }
+      closeEditModal();
+    });
+
+    async function manageNotes(rec) {
+      const currentNotes = rec.notes || [];
+      let message = "Existing notes for " + (rec.plate || "") + " (" + (rec.location || "") + "):\n\n";
+      if (currentNotes.length === 0) {
+        message += "  (no notes yet)\n";
+      } else {
+        currentNotes.forEach((n, idx) => {
+          const when = n.ts ? new Date(n.ts).toLocaleString() : "";
+          message += (idx + 1) + ". [" + when + "] " + (n.text || "") + "\n";
+        });
+      }
+      message += "\nAdd a new note below (leave blank to cancel):";
+
+      const newText = prompt(message, "");
+      if (newText === null || !newText.trim()) return;
+
+      const updatedNotes = currentNotes.slice();
+      updatedNotes.push({
+        text: newText.trim(),
+        ts: new Date().toISOString()
+      });
+
+      try {
+        await updateDoc(doc(db, "plates", rec.id), {
+          notes: updatedNotes
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Error saving note.");
+      }
+    }
+
+    document.getElementById("entry-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!db) {
+        alert("Configuration issue – cannot save right now.");
+        return;
+      }
+
+      const plateInput = document.getElementById("plate");
+      const addrInput = document.getElementById("address");
+      const vinInput = document.getElementById("vin");
+      const locSelect = document.getElementById("location");
+      const notesInput = document.getElementById("notes");
+      const recoveredInput = document.getElementById("recovered");
+
+      const plate = plateInput.value.trim();
+      const address = addrInput.value.trim();
+      const vin = vinInput.value.trim();
+      const location = locSelect.value.trim();
+      const notesText = notesInput.value.trim();
+      const recovered = recoveredInput.checked;
+
+      if (!plate) return;
+
+      const normalized = plate.toUpperCase();
+
+      const notesArr = notesText
+        ? [{ text: notesText, ts: new Date().toISOString() }]
+        : [];
+
+      try {
+        await addDoc(platesCol, {
+          plate,
+          plateNormalized: normalized,
+          address,
+          vin,
+          location,
+          notes: notesArr,
+          recovered,
+          createdAt: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Error adding record.");
+      }
+
+      e.target.reset();
+
+      // Default the location select back to the active tab, if it's a known location
+      const locField = document.getElementById("location");
+      if (["Pittsburgh","Erie","Warren","Akron","Cleveland","Greenville"].includes(activeLocation)) {
+        locField.value = activeLocation;
+      }
+
+      plateInput.focus();
+    });
+
+    searchInput.addEventListener("input", (e) => {
+      searchQuery = e.target.value || "";
+      renderTable();
+    });
+
+    document.getElementById("clear-search").addEventListener("click", () => {
+      searchInput.value = "";
+      searchQuery = "";
+      renderTable();
+      searchInput.focus();
+    });
+  </script>
+</body>
+</html>
