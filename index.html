@@ -13,11 +13,33 @@
     }
     h1 {
       text-align: center;
-      margin-bottom: 6px;
+      margin-bottom: 10px;
+    }
+    /* Tabs */
+    #location-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .tab-btn {
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: #0057d9;
+      color: #fff;
+      border-color: #0040a8;
+      font-weight: bold;
     }
     form {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 12px;
       align-items: end;
@@ -28,9 +50,14 @@
       flex-direction: column;
       gap: 4px;
     }
-    input[type="text"], input[type="search"], input[type="password"] {
+    input[type="text"], input[type="search"], input[type="password"], select, textarea {
       padding: 6px;
       font-size: 0.95rem;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 32px;
+      max-height: 80px;
     }
     button {
       padding: 8px 10px;
@@ -40,14 +67,15 @@
     .small-btn {
       padding: 5px 8px;
       font-size: 0.8rem;
+      margin-right: 3px;
     }
     #duplicate-warning {
       margin-bottom: 8px;
       padding: 8px;
       border-radius: 4px;
-      background-color: #ffe0e0;
-      border: 1px solid #ff8080;
-      color: #700;
+      background-color: #fff8d5;
+      border: 1px solid #f0d76b;
+      color: #665200;
       display: none;
       font-size: 0.85rem;
     }
@@ -66,14 +94,8 @@
     #controls input[type="search"] {
       min-width: 220px;
     }
-    .main-layout {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      align-items: flex-start;
-    }
     .table-wrapper {
-      flex: 2 1 60%;
+      width: 100%;
       min-width: 350px;
     }
     table {
@@ -102,41 +124,9 @@
       font-size: 0.9rem;
       color: #555;
     }
-    .map-panel {
-      flex: 1 1 35%;
-      min-width: 260px;
-    }
-    .map-panel h2 {
-      font-size: 1rem;
-      margin: 0 0 6px;
-    }
-    #map-image {
-      width: 100%;
-      height: auto;
-      border: 1px solid #ccc;
-      min-height: 220px;
-      background: #f9f9f9;
-    }
-    #map-note {
-      font-size: 0.8rem;
-      color: #555;
-      margin-top: 4px;
-    }
-    .pill {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      background: #eef;
-      color: #335;
-      margin-left: 4px;
-    }
-    @media (max-width: 768px) {
+    @media (max-width: 900px) {
       form {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .main-layout {
-        flex-direction: column;
       }
     }
 
@@ -216,6 +206,17 @@
   <div id="app-root">
     <h1>InterLink LPR Tracker</h1>
 
+    <!-- Location tabs -->
+    <div id="location-tabs">
+      <button class="tab-btn active" data-loc="All">All</button>
+      <button class="tab-btn" data-loc="Pittsburgh">Pittsburgh</button>
+      <button class="tab-btn" data-loc="Erie">Erie</button>
+      <button class="tab-btn" data-loc="Warren">Warren</button>
+      <button class="tab-btn" data-loc="Akron">Akron</button>
+      <button class="tab-btn" data-loc="Cleveland">Cleveland</button>
+      <button class="tab-btn" data-loc="Greenville">Greenville</button>
+    </div>
+
     <form id="entry-form">
       <label>
         License Plate
@@ -230,6 +231,20 @@
         <input type="text" id="vin" />
       </label>
       <label>
+        Location Tab
+        <select id="location">
+          <option value="Pittsburgh">Pittsburgh</option>
+          <option value="Erie">Erie</option>
+          <option value="Warren">Warren</option>
+          <option value="Akron">Akron</option>
+          <option value="Cleveland">Cleveland</option>
+        </select>
+      </label>
+      <label>
+        Notes
+        <textarea id="notes" placeholder="Optional notes"></textarea>
+      </label>
+      <label>
         Recovered?
         <input type="checkbox" id="recovered" />
       </label>
@@ -240,39 +255,29 @@
     <div id="status-bar"></div>
 
     <div id="controls">
-      <input type="search" id="search" placeholder="Search by plate, address, or VIN" />
+      <input type="search" id="search" placeholder="Search by plate, address, VIN, location, or notes" />
       <button type="button" id="clear-search" class="small-btn">Clear Search</button>
-      <button type="button" id="delete-all" class="small-btn">Delete ALL Records</button>
     </div>
 
-    <div class="main-layout">
-      <div class="table-wrapper">
-        <table id="plate-table">
-          <thead>
-            <tr>
-              <th>License Plate</th>
-              <th>Address</th>
-              <th>VIN</th>
-              <th>Recovered</th>
-              <th>Date Added</th>
-              <th>Map</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+    <div class="table-wrapper">
+      <table id="plate-table">
+        <thead>
+          <tr>
+            <th>License Plate</th>
+            <th>Address</th>
+            <th>VIN</th>
+            <th>Location</th>
+            <th>Notes</th>
+            <th>Recovered</th>
+            <th>Date Added</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
 
-        <div id="no-records" class="no-records" style="display: none;">
-          No records yet. Add a plate above to get started.
-        </div>
-      </div>
-
-      <div class="map-panel">
-        <h2>Map View <span class="pill">Camera Marker</span></h2>
-        <img id="map-image" src="" alt="Map preview" />
-        <div id="map-note">
-          Select “Map” on a record to show its address with a camera icon.
-        </div>
+      <div id="no-records" class="no-records" style="display: none;">
+        No records yet. Add a plate above to get started.
       </div>
     </div>
   </div>
@@ -348,8 +353,7 @@
       onSnapshot,
       updateDoc,
       query,
-      orderBy,
-      getDocs
+      orderBy
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
     // FILL THIS IN FROM YOUR FIREBASE CONSOLE
@@ -366,10 +370,11 @@
     const duplicateWarning = document.getElementById("duplicate-warning");
     const tableBody = document.querySelector("#plate-table tbody");
     const noRecordsDiv = document.getElementById("no-records");
-    const mapImage = document.getElementById("map-image");
-    const mapNote = document.getElementById("map-note");
+    const tabsContainer = document.getElementById("location-tabs");
+    const searchInput = document.getElementById("search");
 
     let searchQuery = "";
+    let activeLocation = "All";
     let records = []; // live snapshot
 
     let app, db, platesCol;
@@ -383,8 +388,23 @@
       statusBar.textContent = "Status: configuration error.";
     }
 
+    // Tabs handling
+    tabsContainer.addEventListener("click", (e) => {
+      const btn = e.target.closest(".tab-btn");
+      if (!btn) return;
+      activeLocation = btn.getAttribute("data-loc") || "All";
+
+      // update active class
+      document.querySelectorAll(".tab-btn").forEach(b => {
+        b.classList.toggle("active", b === btn);
+      });
+
+      renderTable();
+    });
+
     if (platesCol) {
-      const qPlates = query(platesCol, orderBy("createdAt", "desc"));
+      // Order by plateNormalized so duplicates are grouped together
+      const qPlates = query(platesCol, orderBy("plateNormalized"));
       onSnapshot(
         qPlates,
         (snapshot) => {
@@ -396,6 +416,8 @@
               plateNormalized: data.plateNormalized || (data.plate || "").toUpperCase(),
               address: data.address || "",
               vin: data.vin || "",
+              location: data.location || "",
+              notes: data.notes || "",
               recovered: !!data.recovered,
               createdAt: data.createdAt || null
             };
@@ -422,16 +444,35 @@
         const key = (r.plateNormalized || "").toUpperCase();
         r.isDuplicate = key && counts[key] > 1;
       });
+
+      const hasDupes = Object.values(counts).some(c => c > 1);
+      if (hasDupes) {
+        duplicateWarning.style.display = "block";
+        duplicateWarning.textContent =
+          "Note: duplicate plates are allowed and grouped together in this list.";
+      } else {
+        duplicateWarning.style.display = "none";
+        duplicateWarning.textContent = "";
+      }
+    }
+
+    function passesLocation(rec) {
+      if (activeLocation === "All") return true;
+      const loc = (rec.location || "").toLowerCase();
+      return loc === activeLocation.toLowerCase();
     }
 
     function getFilteredRecords() {
-      if (!searchQuery) return records;
+      let list = records.filter(passesLocation);
+      if (!searchQuery) return list;
       const q = searchQuery.toLowerCase();
-      return records.filter((r) => {
+      return list.filter((r) => {
         return (
           (r.plate || "").toLowerCase().includes(q) ||
           (r.address || "").toLowerCase().includes(q) ||
-          (r.vin || "").toLowerCase().includes(q)
+          (r.vin || "").toLowerCase().includes(q) ||
+          (r.location || "").toLowerCase().includes(q) ||
+          (r.notes || "").toLowerCase().includes(q)
         );
       });
     }
@@ -460,6 +501,12 @@
         const vinTd = document.createElement("td");
         vinTd.textContent = rec.vin || "";
 
+        const locTd = document.createElement("td");
+        locTd.textContent = rec.location || "";
+
+        const notesTd = document.createElement("td");
+        notesTd.textContent = rec.notes || "";
+
         const recTd = document.createElement("td");
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
@@ -486,34 +533,33 @@
           dateTd.textContent = "";
         }
 
-        const mapTd = document.createElement("td");
+        const actionsTd = document.createElement("td");
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.className = "small-btn";
+        editBtn.addEventListener("click", () => editRecord(rec));
+
         const mapBtn = document.createElement("button");
         mapBtn.textContent = "Map";
         mapBtn.className = "small-btn";
         mapBtn.addEventListener("click", () => showOnMap(rec));
-        mapTd.appendChild(mapBtn);
-
-        const actionsTd = document.createElement("td");
-        const navBtn = document.createElement("button");
-        navBtn.textContent = "Navigate";
-        navBtn.className = "small-btn";
-        navBtn.style.marginRight = "4px";
-        navBtn.addEventListener("click", () => navigateTo(rec));
 
         const delBtn = document.createElement("button");
         delBtn.textContent = "Delete";
         delBtn.className = "small-btn";
         delBtn.addEventListener("click", () => deleteRecord(rec.id));
 
-        actionsTd.appendChild(navBtn);
+        actionsTd.appendChild(editBtn);
+        actionsTd.appendChild(mapBtn);
         actionsTd.appendChild(delBtn);
 
         tr.appendChild(plateTd);
         tr.appendChild(addrTd);
         tr.appendChild(vinTd);
+        tr.appendChild(locTd);
+        tr.appendChild(notesTd);
         tr.appendChild(recTd);
         tr.appendChild(dateTd);
-        tr.appendChild(mapTd);
         tr.appendChild(actionsTd);
 
         tableBody.appendChild(tr);
@@ -521,25 +567,21 @@
     }
 
     function showOnMap(rec) {
-      const camIcon = "https://cdn-icons-png.flaticon.com/512/1047/1047711.png";
-      const searchText = rec.address && rec.address.trim() ? rec.address.trim() : rec.plate;
+      const searchText =
+        (rec.address && rec.address.trim()) ? rec.address.trim() :
+        (rec.location && rec.location.trim()) ? rec.location.trim() :
+        rec.plate;
       if (!searchText) return;
-
-      const addr = encodeURIComponent(searchText);
       const url =
-        "https://maps.googleapis.com/maps/api/staticmap?center=" +
-        addr +
-        "&zoom=15&size=600x400&markers=icon:" +
-        encodeURIComponent(camIcon) +
-        "|" +
-        addr;
-
-      mapImage.src = url;
-      mapNote.textContent = "Showing camera marker for: " + searchText;
+        "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(searchText);
+      window.open(url, "_blank");
     }
 
     function navigateTo(rec) {
-      const searchText = rec.address && rec.address.trim() ? rec.address.trim() : rec.plate;
+      const searchText =
+        (rec.address && rec.address.trim()) ? rec.address.trim() :
+        (rec.location && rec.location.trim()) ? rec.location.trim() :
+        rec.plate;
       if (!searchText) return;
       const url =
         "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(searchText);
@@ -556,18 +598,29 @@
       }
     }
 
-    async function deleteAllRecords() {
-      if (!confirm("DELETE ALL records for everyone? This cannot be undone.")) return;
+    async function editRecord(rec) {
+      const newAddress = prompt("Edit address:", rec.address || "");
+      if (newAddress === null) return;
+
+      const newVin = prompt("Edit VIN:", rec.vin || "");
+      if (newVin === null) return;
+
+      const newLocation = prompt("Edit location (Pittsburgh/Erie/Warren/Akron/Cleveland):", rec.location || "");
+      if (newLocation === null) return;
+
+      const newNotes = prompt("Edit notes:", rec.notes || "");
+      if (newNotes === null) return;
+
       try {
-        const snap = await getDocs(platesCol);
-        const batchDeletes = [];
-        snap.forEach((d) => {
-          batchDeletes.push(deleteDoc(doc(db, "plates", d.id)));
+        await updateDoc(doc(db, "plates", rec.id), {
+          address: newAddress.trim(),
+          vin: newVin.trim(),
+          location: newLocation.trim(),
+          notes: newNotes.trim()
         });
-        await Promise.all(batchDeletes);
       } catch (err) {
         console.error(err);
-        alert("Error deleting all records.");
+        alert("Error updating record.");
       }
     }
 
@@ -581,11 +634,15 @@
       const plateInput = document.getElementById("plate");
       const addrInput = document.getElementById("address");
       const vinInput = document.getElementById("vin");
+      const locSelect = document.getElementById("location");
+      const notesInput = document.getElementById("notes");
       const recoveredInput = document.getElementById("recovered");
 
       const plate = plateInput.value.trim();
       const address = addrInput.value.trim();
       const vin = vinInput.value.trim();
+      const location = locSelect.value.trim();
+      const notes = notesInput.value.trim();
       const recovered = recoveredInput.checked;
 
       if (!plate) return;
@@ -595,25 +652,15 @@
         (r) => (r.plateNormalized || "").toUpperCase() === normalized
       );
 
-      if (matches.length > 0) {
-        duplicateWarning.style.display = "block";
-        duplicateWarning.textContent =
-          "⚠ Duplicate detected: this plate is already in the list (" +
-          matches.length +
-          " entr" +
-          (matches.length === 1 ? "y" : "ies") +
-          ").";
-      } else {
-        duplicateWarning.style.display = "none";
-        duplicateWarning.textContent = "";
-      }
-
+      // We allow duplicates, just show info banner handled in markDuplicates()
       try {
         await addDoc(platesCol, {
           plate,
           plateNormalized: normalized,
           address,
           vin,
+          location,
+          notes,
           recovered,
           createdAt: new Date().toISOString()
         });
@@ -623,23 +670,27 @@
       }
 
       e.target.reset();
+
+      // Default the location select back to the active tab, if it's a known location
+      const locField = document.getElementById("location");
+      if (["Pittsburgh","Erie","Warren","Akron","Cleveland"].includes(activeLocation)) {
+        locField.value = activeLocation;
+      }
+
       plateInput.focus();
     });
 
-    document.getElementById("search").addEventListener("input", (e) => {
+    searchInput.addEventListener("input", (e) => {
       searchQuery = e.target.value || "";
       renderTable();
     });
 
     document.getElementById("clear-search").addEventListener("click", () => {
-      const searchInput = document.getElementById("search");
       searchInput.value = "";
       searchQuery = "";
       renderTable();
       searchInput.focus();
     });
-
-    document.getElementById("delete-all").addEventListener("click", deleteAllRecords);
   </script>
 </body>
 </html>
